@@ -6,7 +6,9 @@
   <title>Gestion du matériel scolaire</title>
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Firebase SDK -->
+  <!-- ================================================
+       🔹 FIREBASE SDK
+  ================================================ -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
@@ -18,7 +20,9 @@
         <h1 class="text-2xl font-bold text-center">Gestion du matériel scolaire</h1>
       </div>
 
-      <!-- LOGIN -->
+      <!-- ================================================
+           🔹 LOGIN
+      ================================================ -->
       <div id="loginDiv" class="p-6 space-y-4">
         <h2 class="text-xl font-semibold">Connexion</h2>
         <div class="grid md:grid-cols-2 gap-4">
@@ -39,7 +43,9 @@
         <button onclick="login()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-semibold">Se connecter</button>
       </div>
 
-      <!-- APP -->
+      <!-- ================================================
+           🔹 APP
+      ================================================ -->
       <div id="app" class="hidden p-6 space-y-8">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
@@ -129,19 +135,39 @@
     </div>
   </div>
 
+  <!-- ================================================
+       🔹 SCRIPT FIREBASE & LOGIQUE APP
+  ================================================ -->
   <script>
-    let user = null;
+    // ==============================
+    // 🔹 CONFIG & INIT FIREBASE REEL
+    // ==============================
+    const firebaseConfig = {
+      apiKey: "AIzaSyDYIBX8w2j9zYPDJAWADAACE59zuDaNJzQ",
+      authDomain: "gestion-materiel-lycee.firebaseapp.com",
+      projectId: "gestion-materiel-lycee",
+      storageBucket: "gestion-materiel-lycee.firebasestorage.app",
+      messagingSenderId: "135052853060",
+      appId: "1:135052853060:web:cb47ae6eb056b7a615a111",
+      measurementId: "G-0918153L6B"
+    };
+    const app = firebase.initializeApp(firebaseConfig);
+    const dbFirestore = firebase.firestore(app);
+    const auth = firebase.auth(app); // Pour future authentification
 
-    // Codes d'accès (à remplacer par Firebase Auth plus tard)
+    // ==============================
+    // 🔹 VARIABLES GLOBALES
+    // ==============================
+    let user = null;
     const ACCESS_CODES = {
       "Administration": "@@Kahani@2026",
       "Technicien": "Technicien@2026",
       "Professeur": "prof@2026"
     };
 
-    // Firebase Firestore
-    const dbFirestore = firebase.firestore();
-
+    // ==============================
+    // 🔹 LOGIN / LOGOUT
+    // ==============================
     function login() {
       const type = document.getElementById('userType').value;
       const code = document.getElementById('accessCode').value.trim();
@@ -166,7 +192,9 @@
 
     function logout() { location.reload(); }
 
-    // Ajouter bâtiment Firestore
+    // ==============================
+    // 🔹 GESTION FIRESTORE : BATIMENTS
+    // ==============================
     async function ajouterBatiment() {
       const val = document.getElementById('newBatiment').value.trim();
       if(!val) return alert("Entrez un nom de bâtiment");
@@ -176,19 +204,54 @@
       ajouterHistorique("Ajout bâtiment : "+val);
     }
 
-    // Ajouter salle Firestore
+    function majBatiments() {
+      const selB = document.querySelectorAll('#batiment, #batimentClasse');
+      selB.forEach(s => s.innerHTML = "<option value=''>-- Choisir --</option>");
+      dbFirestore.collection("batiments").get().then(snapshot=>{
+        snapshot.docs.forEach(doc=>{
+          selB.forEach(s=>{ 
+            const opt = document.createElement('option');
+            opt.value=doc.data().nom;
+            opt.textContent=doc.data().nom;
+            s.appendChild(opt);
+          });
+        });
+      });
+    }
+
+    // ==============================
+    // 🔹 GESTION FIRESTORE : CLASSES
+    // ==============================
     async function ajouterClasse() {
       const nom = document.getElementById('newClasse').value.trim();
       const batiment = document.getElementById('batimentClasse').value;
       const type = document.getElementById('newTypeClasse').value;
       if(!nom || !batiment) return alert("Remplir salle et bâtiment");
+
       await dbFirestore.collection("classes").add({ nom, batiment, type });
       document.getElementById('newClasse').value = "";
       majClasses();
       ajouterHistorique(`Ajout salle ${nom} (${batiment})`);
     }
 
-    // Ajouter matériel Firestore
+    function majClasses() {
+      const selC = document.querySelectorAll('#classeNum');
+      selC.forEach(s => s.innerHTML = "<option value=''>-- Choisir --</option>");
+      dbFirestore.collection("classes").get().then(snapshot=>{
+        snapshot.docs.forEach(doc=>{
+          selC.forEach(s=>{
+            const opt = document.createElement('option');
+            opt.value=doc.data().nom + '||' + doc.data().batiment;
+            opt.textContent=doc.data().nom + " (" + doc.data().batiment + ")";
+            s.appendChild(opt);
+          });
+        });
+      });
+    }
+
+    // ==============================
+    // 🔹 GESTION FIRESTORE : MATERIEL
+    // ==============================
     async function enregistrerMateriel() {
       const batiment = document.getElementById('batiment').value;
       const classeValue = document.getElementById('classeNum').value;
@@ -201,7 +264,10 @@
       if(batimentSalle!==batiment) return alert("Salle ne correspond pas au bâtiment");
 
       await dbFirestore.collection("materiel").add({
-        batiment, classe, type, materiel, descriptionAjout: desc, ajoutePar: user, date: new Date().toLocaleString()
+        batiment, classe, type, materiel,
+        descriptionAjout: desc,
+        ajoutePar: user,
+        date: new Date().toLocaleString()
       });
 
       document.getElementById('batiment').value="";
@@ -213,7 +279,9 @@
       alert("Matériel enregistré avec succès");
     }
 
-    // Historique Firestore
+    // ==============================
+    // 🔹 GESTION FIRESTORE : HISTORIQUE
+    // ==============================
     async function ajouterHistorique(action) {
       if(!user) return;
       await dbFirestore.collection("historique").add({
@@ -234,43 +302,14 @@
           const h = doc.data();
           const div = document.createElement('div');
           div.className = "border rounded-xl p-3 bg-slate-50";
-          div.innerHTML = `<div class="font-semibold">${h.action}</div>
+          div.innerHTML = `
+            <div class="font-semibold">${h.action}</div>
             <div class="text-sm text-gray-700">Utilisateur : ${h.utilisateur}</div>
             <div class="text-sm text-gray-500">Date : ${h.date} - Heure : ${h.heure}</div>`;
           list.appendChild(div);
         });
       });
     }
-
-    // MAJ selects
-    function majBatiments() {
-      const selB = document.querySelectorAll('#batiment, #batimentClasse');
-      dbFirestore.collection("batiments").get().then(snapshot=>{
-        snapshot.docs.forEach(doc=>{
-          selB.forEach(s=>{ 
-            const opt = document.createElement('option');
-            opt.value=doc.data().nom;
-            opt.textContent=doc.data().nom;
-            s.appendChild(opt);
-          });
-        });
-      });
-    }
-
-    function majClasses() {
-      const selC = document.querySelectorAll('#classeNum');
-      dbFirestore.collection("classes").get().then(snapshot=>{
-        snapshot.docs.forEach(doc=>{
-          selC.forEach(s=>{
-            const opt = document.createElement('option');
-            opt.value=doc.data().nom + '||' + doc.data().batiment;
-            opt.textContent=doc.data().nom + " (" + doc.data().batiment + ")";
-            s.appendChild(opt);
-          });
-        });
-      });
-    }
-
   </script>
 </body>
 </html>
