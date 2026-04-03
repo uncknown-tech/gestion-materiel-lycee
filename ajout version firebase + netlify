@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestion du matériel scolaire</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+</head>
+<body class="bg-slate-100 min-h-screen p-4">
+  <div class="max-w-7xl mx-auto">
+    <div class="bg-white shadow-xl rounded-2xl overflow-hidden">
+      <div class="bg-blue-700 text-white p-5">
+        <h1 class="text-2xl font-bold text-center">Gestion du matériel scolaire</h1>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="loginDiv" class="p-6 space-y-4">
+        <h2 class="text-xl font-semibold">Connexion</h2>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">Type d'utilisateur</label>
+            <select id="userType" class="w-full border rounded-xl p-3">
+              <option value="">-- Choisir --</option>
+              <option value="Administration">Administration</option>
+              <option value="Professeur">Professeur</option>
+              <option value="Technicien">Technicien</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Code d'accès</label>
+            <input id="accessCode" type="password" placeholder="Entrez votre code" class="w-full border rounded-xl p-3" />
+          </div>
+        </div>
+        <button onclick="login()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-semibold">Se connecter</button>
+      </div>
+
+      <!-- APP -->
+      <div id="app" class="hidden p-6 space-y-8">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold">Tableau de bord</h2>
+            <p id="currentUser" class="text-gray-600"></p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="logout()" class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded-xl font-semibold">
+              Déconnexion
+            </button>
+          </div>
+        </div>
+
+        <!-- ADMIN + TECH : gestion bâtiments/salles -->
+        <div id="adminSection" class="hidden space-y-6">
+          <div class="grid lg:grid-cols-2 gap-6">
+            <div class="bg-slate-50 border rounded-2xl p-5 space-y-4">
+              <h3 class="text-lg font-bold">Gestion des bâtiments</h3>
+              <div class="flex gap-2">
+                <input id="newBatiment" type="text" placeholder="Nom du bâtiment" class="flex-1 border rounded-xl p-3" />
+                <button onclick="ajouterBatiment()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-xl">Ajouter</button>
+              </div>
+              <div id="listeBatiments" class="space-y-2"></div>
+            </div>
+            <div class="bg-slate-50 border rounded-2xl p-5 space-y-4">
+              <h3 class="text-lg font-bold">Gestion des salles</h3>
+              <div class="grid md:grid-cols-2 gap-2">
+                <input id="newClasse" type="text" placeholder="Ex: 204" class="border rounded-xl p-3" />
+                <select id="batimentClasse" class="border rounded-xl p-3"></select>
+                <select id="newTypeClasse" class="border rounded-xl p-3 md:col-span-2">
+                  <option value="Normale">Classe normale</option>
+                  <option value="Informatique">Classe informatique</option>
+                </select>
+              </div>
+              <button onclick="ajouterClasse()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-semibold">Ajouter la salle</button>
+              <div id="listeClasses" class="space-y-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TECH : ajout matériel -->
+        <div id="materielSection" class="hidden bg-white border rounded-2xl p-5 space-y-4">
+          <h3 class="text-lg font-bold">Ajouter un matériel</h3>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label>Bâtiment</label>
+              <select id="batiment" class="w-full border rounded-xl p-3"></select>
+            </div>
+            <div>
+              <label>Salle</label>
+              <select id="classeNum" class="w-full border rounded-xl p-3"></select>
+            </div>
+            <div>
+              <label>Type de classe</label>
+              <select id="typeClasse" class="w-full border rounded-xl p-3">
+                <option value="Normale">Classe normale</option>
+                <option value="Informatique">Classe informatique</option>
+              </select>
+            </div>
+            <div>
+              <label>Type de matériel</label>
+              <select id="materiel" class="w-full border rounded-xl p-3">
+                <option value="">-- Choisir --</option>
+                <option value="Unité Centrale">Unité Centrale</option>
+                <option value="Clavier">Clavier</option>
+                <option value="Souris">Souris</option>
+                <option value="Écran">Écran</option>
+                <option value="Vidéoprojecteur">Vidéoprojecteur</option>
+                <option value="Câble HDMI">Câble HDMI</option>
+                <option value="Câble Alimentation">Câble Alimentation</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label>Description de l'ajout / amélioration</label>
+            <textarea id="descriptionAjout" class="w-full border rounded-xl p-3 min-h-[120px]" placeholder="Ex: Ajout SSD, câble, etc."></textarea>
+          </div>
+          <button onclick="enregistrerMateriel()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-semibold">Enregistrer le matériel</button>
+        </div>
+
+        <!-- HISTORIQUE -->
+        <div id="historiqueBloc" class="hidden bg-white border rounded-2xl p-5">
+          <h3 class="text-lg font-bold mb-4">Historique</h3>
+          <div id="historiqueList" class="space-y-3"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let user = null;
+
+    // Codes d'accès (à remplacer par Firebase Auth plus tard)
+    const ACCESS_CODES = {
+      "Administration": "@@Kahani@2026",
+      "Technicien": "Technicien@2026",
+      "Professeur": "prof@2026"
+    };
+
+    // Firebase Firestore
+    const dbFirestore = firebase.firestore();
+
+    function login() {
+      const type = document.getElementById('userType').value;
+      const code = document.getElementById('accessCode').value.trim();
+      if (!type || !code) { alert("Choisissez type et code."); return; }
+      if (ACCESS_CODES[type] !== code) { alert("Code incorrect"); return; }
+
+      user = type;
+      document.getElementById('loginDiv').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      document.getElementById('currentUser').innerText = `Connecté en tant que : ${user}`;
+
+      if(user==="Administration" || user==="Technicien") {
+        document.getElementById('adminSection').classList.remove('hidden');
+        document.getElementById('materielSection').classList.remove('hidden');
+        document.getElementById('historiqueBloc').classList.remove('hidden');
+      }
+
+      majBatiments();
+      majClasses();
+      afficherHistorique();
+    }
+
+    function logout() { location.reload(); }
+
+    // Ajouter bâtiment Firestore
+    async function ajouterBatiment() {
+      const val = document.getElementById('newBatiment').value.trim();
+      if(!val) return alert("Entrez un nom de bâtiment");
+      await dbFirestore.collection("batiments").add({ nom: val });
+      document.getElementById('newBatiment').value = "";
+      majBatiments();
+      ajouterHistorique("Ajout bâtiment : "+val);
+    }
+
+    // Ajouter salle Firestore
+    async function ajouterClasse() {
+      const nom = document.getElementById('newClasse').value.trim();
+      const batiment = document.getElementById('batimentClasse').value;
+      const type = document.getElementById('newTypeClasse').value;
+      if(!nom || !batiment) return alert("Remplir salle et bâtiment");
+      await dbFirestore.collection("classes").add({ nom, batiment, type });
+      document.getElementById('newClasse').value = "";
+      majClasses();
+      ajouterHistorique(`Ajout salle ${nom} (${batiment})`);
+    }
+
+    // Ajouter matériel Firestore
+    async function enregistrerMateriel() {
+      const batiment = document.getElementById('batiment').value;
+      const classeValue = document.getElementById('classeNum').value;
+      const type = document.getElementById('typeClasse').value;
+      const materiel = document.getElementById('materiel').value;
+      const desc = document.getElementById('descriptionAjout').value.trim();
+      if(!batiment || !classeValue || !materiel) return alert("Remplir les champs");
+
+      const [classe, batimentSalle] = classeValue.split('||');
+      if(batimentSalle!==batiment) return alert("Salle ne correspond pas au bâtiment");
+
+      await dbFirestore.collection("materiel").add({
+        batiment, classe, type, materiel, descriptionAjout: desc, ajoutePar: user, date: new Date().toLocaleString()
+      });
+
+      document.getElementById('batiment').value="";
+      document.getElementById('classeNum').value="";
+      document.getElementById('typeClasse').value="Normale";
+      document.getElementById('materiel').value="";
+      document.getElementById('descriptionAjout').value="";
+      ajouterHistorique(`Ajout matériel ${materiel} (${classe})`);
+      alert("Matériel enregistré avec succès");
+    }
+
+    // Historique Firestore
+    async function ajouterHistorique(action) {
+      if(!user) return;
+      await dbFirestore.collection("historique").add({
+        utilisateur: user,
+        action,
+        date: new Date().toLocaleDateString(),
+        heure: new Date().toLocaleTimeString()
+      });
+      afficherHistorique();
+    }
+
+    function afficherHistorique() {
+      const list = document.getElementById('historiqueList');
+      list.innerHTML = "";
+      dbFirestore.collection("historique").orderBy("date","desc").onSnapshot(snapshot => {
+        list.innerHTML = "";
+        snapshot.docs.forEach(doc => {
+          const h = doc.data();
+          const div = document.createElement('div');
+          div.className = "border rounded-xl p-3 bg-slate-50";
+          div.innerHTML = `<div class="font-semibold">${h.action}</div>
+            <div class="text-sm text-gray-700">Utilisateur : ${h.utilisateur}</div>
+            <div class="text-sm text-gray-500">Date : ${h.date} - Heure : ${h.heure}</div>`;
+          list.appendChild(div);
+        });
+      });
+    }
+
+    // MAJ selects
+    function majBatiments() {
+      const selB = document.querySelectorAll('#batiment, #batimentClasse');
+      dbFirestore.collection("batiments").get().then(snapshot=>{
+        snapshot.docs.forEach(doc=>{
+          selB.forEach(s=>{ 
+            const opt = document.createElement('option');
+            opt.value=doc.data().nom;
+            opt.textContent=doc.data().nom;
+            s.appendChild(opt);
+          });
+        });
+      });
+    }
+
+    function majClasses() {
+      const selC = document.querySelectorAll('#classeNum');
+      dbFirestore.collection("classes").get().then(snapshot=>{
+        snapshot.docs.forEach(doc=>{
+          selC.forEach(s=>{
+            const opt = document.createElement('option');
+            opt.value=doc.data().nom + '||' + doc.data().batiment;
+            opt.textContent=doc.data().nom + " (" + doc.data().batiment + ")";
+            s.appendChild(opt);
+          });
+        });
+      });
+    }
+
+  </script>
+</body>
+</html>
